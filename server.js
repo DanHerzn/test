@@ -84,6 +84,12 @@ app.get('/', (req, res) => {
           return Number.isFinite(n) ? n.toLocaleString() + suffix : '--';
         }
 
+        function escapeHtml(value) {
+          return String(value).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+          });
+        }
+
         async function loadTable() {
           const tbody = document.getElementById('table-body');
           tbody.innerHTML = '<tr><td colspan="6">Cargando información...</td></tr>';
@@ -103,19 +109,20 @@ app.get('/', (req, res) => {
                 : null;
               const badgeClass = prob !== null && prob >= 0.75 ? 'badge-high' : 'badge-low';
               const probabilityCell = prob !== null
-                ? `<span class="badge ${badgeClass}">${(prob * 100).toFixed(1)}%</span>`
+                ? '<span class="badge ' + badgeClass + '">' + (prob * 100).toFixed(1) + '%</span>'
                 : '<span class="muted">N/A</span>';
+              const demandCell = (row.predicted_demand_qty !== null && row.predicted_demand_qty !== undefined)
+                ? formatNumber(row.predicted_demand_qty, ' lb')
+                : 'Sin pronóstico';
 
-              return `
-                <tr>
-                  <td><strong>${row.sku || '--'}</strong></td>
-                  <td>${row.name || '--'}</td>
-                  <td>${formatNumber(row.current_stock, ' lb')}</td>
-                  <td>${row.predicted_demand_qty !== null && row.predicted_demand_qty !== undefined ? formatNumber(row.predicted_demand_qty, ' lb') : 'Sin pronóstico'}</td>
-                  <td>${probabilityCell}</td>
-                  <td>${row.model_version || '--'}</td>
-                </tr>
-              `;
+              return '<tr>' +
+                '<td><strong>' + escapeHtml(row.sku || '--') + '</strong></td>' +
+                '<td>' + escapeHtml(row.name || '--') + '</td>' +
+                '<td>' + formatNumber(row.current_stock, ' lb') + '</td>' +
+                '<td>' + demandCell + '</td>' +
+                '<td>' + probabilityCell + '</td>' +
+                '<td>' + escapeHtml(row.model_version || '--') + '</td>' +
+                '</tr>';
             }).join('');
           } catch (err) {
             tbody.innerHTML = '<tr><td colspan="6">Error al cargar datos.</td></tr>';
